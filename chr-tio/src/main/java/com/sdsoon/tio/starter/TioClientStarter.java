@@ -22,6 +22,7 @@ public class TioClientStarter {
     //handler, 包括编码、解码、消息处理
     public static ClientAioHandler tioClientHandler = new TioClientAioHandler();
     //事件监听器，可以为null，但建议自己实现该接口，可以参考showcase了解些接口
+    //    public static ClientAioListener clientAioListener = new ClientListener();
     public static ClientAioListener aioListener = null;
     //断链后自动连接的，不想自动连接请设为null
     private static ReconnConf reconnConf = new ReconnConf(5000L);
