@@ -14,11 +14,29 @@ import java.nio.ByteBuffer;
  */
 public class TioClientAioHandler implements ClientAioHandler {
     private static TioPacket heartbeatPacket = new TioPacket();
+
     /**
      * 解码：把接收到的ByteBuffer，解码成应用可以识别的业务消息包
      * 总的消息结构：消息头 + 消息体
      * 消息头结构：    4个字节，存储消息体的长度
      * 消息体结构：   对象的json串的byte[]
+     * <p>
+     * <p>
+     * * <p>
+     * 对于半包：
+     * 业务端需要在AioHandler.decode()里返回一个null对象给框架，
+     * 框架拿到null后，就会认为这是个半包，进而把收到的数据暂存到DecodeRunnable.lastByteBuffer，
+     * 当后面再收到数据时，把DecodeRunnable.lastByteBuffer和新收到的数据组成一个新的bytebuffer给业务端，
+     * 如此循环，直到业务端能组成一个packet对象给框架层。
+     * <p>
+     * 对于粘包：
+     * 业务端在AioHandler.decode()方法中，解码一个packet对象返回给框架后，
+     * 框架会自行判断是否有多余的byte没有被处理，
+     * 如果有，则拿剩下的byte(bytebuffer)让业务端继续解码，
+     * 直到业务端返回null或是返回packet但没有剩余byte为止。
+     * <p>
+     * 框架层已经做好半包和粘包的工作，业务层只需要按着业务协议解码即可，
+     * 框架会处理好剩下的byte或是上次没处理完的byte的。
      */
     @Override
     public TioPacket decode(ByteBuffer buffer, int limit, int position, int readableLength, ChannelContext channelContext) throws AioDecodeException {
@@ -50,6 +68,7 @@ public class TioClientAioHandler implements ClientAioHandler {
             return imPacket;
         }
     }
+
     /**
      * 编码：把业务消息包编码为可以发送的ByteBuffer
      * 总的消息结构：消息头 + 消息体
@@ -78,6 +97,7 @@ public class TioClientAioHandler implements ClientAioHandler {
         }
         return buffer;
     }
+
     /**
      * 处理消息：用于接收server的消息
      */
@@ -92,6 +112,7 @@ public class TioClientAioHandler implements ClientAioHandler {
         }
         return;
     }
+
     /**
      * 此方法如果返回null，框架层面则不会发心跳；如果返回非null，框架层面会定时发本方法返回的消息包
      */
