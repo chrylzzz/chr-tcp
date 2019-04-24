@@ -61,6 +61,11 @@ public class RpcServer {
 //                    pipeline.addLast(new StringDecoder());//把网络字节流自动解码为 String 对象，属于入站处理器
 
 
+//                    readerIdleTimeSeconds, 读超时. 即当在指定的时间间隔内没有从 Channel 读取到数据时, 会触发一个 READER_IDLE 的 IdleStateEvent 事件.
+//
+//                    writerIdleTimeSeconds, 写超时. 即当在指定的时间间隔内没有数据写入到 Channel 时, 会触发一个 WRITER_IDLE 的 IdleStateEvent 事件.
+//
+//                    allIdleTimeSeconds, 读/写超时. 即当在指定的时间间隔内没有读或写操作时, 会触发一个 ALL_IDLE 的 IdleStateEvent 事件.
 //                    第一个参数 60 表示读操作空闲时间
 //                    第二个参数 20 表示写操作空闲时间
 //                    第三个参数 60*10 表示读写操作空闲时间

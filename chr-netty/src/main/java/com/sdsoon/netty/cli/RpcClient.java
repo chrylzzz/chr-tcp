@@ -1,6 +1,7 @@
 package com.sdsoon.netty.cli;
 
 
+import com.sdsoon.netty.NettyConfig;
 import com.sdsoon.netty.bean.RpcRequest;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -14,6 +15,7 @@ import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created By Chr on 2019/4/15.
@@ -28,16 +30,12 @@ public class RpcClient {
 
     //    private final static String serviceAddress = "192.168.0.148:60000";
     private final static String serviceAddress = "127.0.0.1:700";
+    private Channel channel;
+    private Bootstrap bootstrap;
+
 
     public Object create() {
 
-
-        //写回服务端数据
-        RpcRequest rpcRequest = new RpcRequest();
-        rpcRequest.setId(1);
-        rpcRequest.setData("客户端发送消息的数据对象~~~");
-        rpcRequest.setImso("imso");
-        rpcRequest.setTime(System.currentTimeMillis());
 
         //解析host和ip
         String[] arrs = serviceAddress.split(":");
@@ -52,7 +50,7 @@ public class RpcClient {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
 
-            Bootstrap bootstrap = new Bootstrap();
+            bootstrap = new Bootstrap();
             // 是否启用心跳保活机机制
             bootstrap.group(group).channel(NioSocketChannel.class)
                     .option(ChannelOption.TCP_NODELAY, true)
@@ -69,23 +67,25 @@ public class RpcClient {
 //                            pipeline.addLast(new StringEncoder());//对 String 对象自动编码,属于出站站处理器
 //                            pipeline.addLast(new StringDecoder());//把网络字节流自动解码为 String 对象，属于入站处理器
 
-
                             pipeline.addLast(rpcClientHandler);
 
                         }
                     });
 
+            //封装
+            doConnect();
+
             //连接服务 地址
-            ChannelFuture future = bootstrap.connect(host, port).sync();
-            if (future.isSuccess()) {
-
-                System.err.println(" Netty服务端连接成功，等待发送数据: ==================");
-
-            }
-            //将封装好的rpcRequest 对象写过去-》服务端数据的返回
-            //写回到服务端
-            future.channel().writeAndFlush(rpcRequest);
-            future.channel().closeFuture().sync();
+//            ChannelFuture future = bootstrap.connect(host, port).sync();
+//            if (future.isSuccess()) {
+//
+//                System.err.println(" Netty服务端连接成功，等待发送数据: ==================");
+//
+//            }
+//            //将封装好的rpcRequest 对象写过去-》服务端数据的返回
+//            //写回到服务端
+//            future.channel().writeAndFlush(rpcRequest);
+//            future.channel().closeFuture().sync();
         } catch (Exception e) {
             //e.printStackTrace();
             System.err.println(" Netty服务端连接失败:============= ");
@@ -98,5 +98,42 @@ public class RpcClient {
 
         return rpcClientHandler.getResponse();
 
+    }
+
+
+    //客户端断线重连,发送数据
+    protected void doConnect() {
+        if (channel != null && channel.isActive()) {
+            return;
+        }
+
+        ChannelFuture future = bootstrap.connect(NettyConfig.HOST, NettyConfig.PORT);
+
+        //写回服务端数据
+        RpcRequest rpcRequest = new RpcRequest();
+        rpcRequest.setId(1);
+        rpcRequest.setData("客户端发送消息的数据对象~~~");
+        rpcRequest.setImso("imso");
+        rpcRequest.setTime(System.currentTimeMillis());
+
+        //监听
+        future.addListener((ChannelFutureListener) futureListener -> {
+            if (futureListener.isSuccess()) {
+                channel = futureListener.channel();
+                System.err.println("Connect to server successfully!");
+
+                //将封装好的rpcRequest 对象写过去-》服务端数据的返回
+                //写回到服务端
+                future.channel().writeAndFlush(rpcRequest);
+                future.channel().closeFuture().sync();
+            } else {
+                System.err.println("Failed to connect to server, try connect after 10s");
+
+                //10秒尝试重新连接
+                futureListener.channel()
+                        .eventLoop()
+                        .schedule(() -> doConnect(), 10, TimeUnit.SECONDS);
+            }
+        });
     }
 }
