@@ -10,8 +10,10 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+import io.netty.handler.timeout.IdleStateHandler;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 基于Netty：
@@ -57,6 +59,14 @@ public class RpcServer {
 
 //                    pipeline.addLast(new StringEncoder());//对 String 对象自动编码,属于出站站处理器
 //                    pipeline.addLast(new StringDecoder());//把网络字节流自动解码为 String 对象，属于入站处理器
+
+
+//                    第一个参数 60 表示读操作空闲时间
+//                    第二个参数 20 表示写操作空闲时间
+//                    第三个参数 60*10 表示读写操作空闲时间
+//                    第四个参数 单位/秒
+                    pipeline.addLast("idleStateHandler",
+                            new IdleStateHandler(5, 7, 10, TimeUnit.SECONDS));
 
                     pipeline.addLast(rpcServerHandler);
 
